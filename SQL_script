@@ -35,7 +35,7 @@ WITH monthly_users AS (
 
 reached_4plus_users AS (
     SELECT DISTINCT user_id
-    FROM transactions
+    FROM subscription
     WHERE subscription_type = 'monthly'
       AND activations = 'monthly_renewal_4+'
       AND server_order_status = 'ORDERED_SUCCESSFULLY'
