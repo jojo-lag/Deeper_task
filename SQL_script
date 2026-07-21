@@ -1,0 +1,53 @@
+--- Q1: unique subscriptions & users (successful orders only)
+SELECT COUNT(DISTINCT subscription_id) AS unique_subs,
+       COUNT(DISTINCT user_id)          AS unique_users
+FROM subscription
+WHERE server_order_status = 'ORDERED_SUCCESSFULLY';
+
+--- Q3: monthly and yearly subscription mix
+SELECT
+    purchase_month,
+    COUNT(*) AS total_transactions,
+    SUM(CASE WHEN plan_type = 'yearly' THEN 1 ELSE 0 END) AS yearly_transactions,
+    ROUND(
+        100.0 * SUM(CASE WHEN plan_type = 'yearly' THEN 1 ELSE 0 END) / COUNT(*),
+        1
+    ) AS pct_yearly
+FROM subscription
+WHERE server_order_status = 'ORDERED_SUCCESSFULLY'
+GROUP BY purchase_month
+ORDER BY purchase_month;
+
+----Q4: trial share of NEW subscriptions
+SELECT AVG(CASE WHEN activations LIKE '%trial%' THEN 1.0 ELSE 0 END) * 100 AS pct_trial
+FROM subscription
+WHERE server_order_status = 'ORDERED_SUCCESSFULLY'
+  AND activations IN ('monthly_activation','yearly_activation','yearly_plus_activation',
+                       'monthly_trial_activation','yearly_trial_activation');
+
+---- Q6 monthly subscribers who reached their monthly 4th+
+WITH monthly_users AS (
+    SELECT DISTINCT user_id
+    FROM subscription
+    WHERE subscription_type = 'monthly'
+      AND server_order_status = 'ORDERED_SUCCESSFULLY'
+),
+
+reached_4plus_users AS (
+    SELECT DISTINCT user_id
+    FROM transactions
+    WHERE subscription_type = 'monthly'
+      AND activations = 'monthly_renewal_4+'
+      AND server_order_status = 'ORDERED_SUCCESSFULLY'
+)
+
+SELECT
+    (SELECT COUNT(*) FROM monthly_users) AS total_monthly_users,
+    (SELECT COUNT(*) FROM reached_4plus_users) AS reached_4plus_users,
+    ROUND(
+        100.0 * (SELECT COUNT(*) FROM reached_4plus_users)
+        / (SELECT COUNT(*) FROM monthly_users),
+        1
+    ) AS pct_reaching_4plus;
+
+
